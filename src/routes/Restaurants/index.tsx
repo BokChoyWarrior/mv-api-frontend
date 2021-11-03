@@ -93,11 +93,11 @@ function Restaurant(props: any) {
   return (
     <>
       <Col className="mx-auto" style={{ margin: "20px 0" }}>
-        <Card style={{ width: "24rem" }}>
+        <Card style={{ width: "24rem", height: "24rem" }}>
           <Card.Img
             variant="top"
             src={props.restaurant.image}
-            style={{ maxHeight: "16rem" }}
+            style={{ height: "16rem" }}
           />
           <Card.Body>
             <Card.Title>{props.restaurant.name}</Card.Title>
@@ -134,12 +134,13 @@ function Restaurant(props: any) {
 function PlaceholderRestaurant() {
   return (
     <Col className="mx-auto" style={{ margin: "20px 0" }}>
-      <Card style={{ width: "24rem" }}>
+      <Card style={{ width: "24rem", height: "24rem" }}>
         <Card.Img
           variant="top"
-          src="loading-animation.gif"
+          src="grey_square.png"
           style={{ maxHeight: "16rem" }}
         />
+        {/* <Placeholder as={Card.Img} animation="glow" /> */}
         <Card.Body>
           <Placeholder as={Card.Title} animation="glow">
             <Placeholder xs={6} />

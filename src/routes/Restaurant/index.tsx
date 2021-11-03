@@ -66,7 +66,10 @@ export default function Restaurant() {
     <>
       <Container fluid="md">
         <h1>{restaurant.data.name}</h1>
-        <Image src={restaurant.data.image} fluid />
+        <Image
+          src={restaurant.data.image}
+          style={{ maxWidth: "80%", maxHeight: "18rem" }}
+        />
         <Menus menus={restaurant.data.menus} />
       </Container>
 
