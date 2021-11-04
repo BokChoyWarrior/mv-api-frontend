@@ -1,8 +1,22 @@
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { Button, Card, Col, Container, Form, Modal, Placeholder, Row } from 'react-bootstrap';
+import axios from "axios";
+import { useEffect, useState } from "react";
+import {
+  Button,
+  Card,
+  Col,
+  Container,
+  Form,
+  Modal,
+  Placeholder,
+  Row,
+} from "react-bootstrap";
 
-import { RestaurantCard } from '../../components/Utilities';
+import {
+  RestaurantCard,
+  EditRestaurantButton,
+  DeleteRestaurantButton,
+  ViewRestaurantButton,
+} from "../../components/Utilities";
 
 const API_ENDPOINT = process.env.REACT_APP_BASE_URL + "/api/restaurants";
 
@@ -12,8 +26,7 @@ export default function Restaurants() {
     data: [],
   });
 
-  const deleteRestaurant = async (id: any) => {
-    const response = await axios.delete(`${API_ENDPOINT}/${id}`);
+  const deleteRestaurant = async (response: any, id: any) => {
     if (response.status === 200) {
       setRestaurants({
         loading: false,
@@ -68,11 +81,18 @@ export default function Restaurants() {
     <Container fluid="md">
       <AddRestaurantButton create={createRestaurant} />
       <Row xs="auto" md="auto" lg="auto">
-        {restaurants.data.map((item: any) => (
+        {restaurants.data.map((restaurant: any) => (
           <RestaurantCard
-            restaurant={item}
-            delete={deleteRestaurant}
-            key={item.id}
+            restaurant={restaurant}
+            key={restaurant.id}
+            deleteButton={
+              <>
+                <DeleteRestaurantButton
+                  restaurant={restaurant}
+                  handleDelete={deleteRestaurant}
+                />
+              </>
+            }
           />
         ))}
       </Row>

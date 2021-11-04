@@ -1,12 +1,26 @@
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { Button, Col, Container, Form, Image, Modal, Row, Spinner, Tab, Tabs } from 'react-bootstrap';
-import { PlusLg, Trash } from 'react-bootstrap-icons';
-import { useHistory, useParams } from 'react-router-dom';
+import axios from "axios";
+import { useEffect, useState } from "react";
+import {
+  Button,
+  Col,
+  Container,
+  Form,
+  Image,
+  Modal,
+  Row,
+  Spinner,
+  Tab,
+  Tabs,
+} from "react-bootstrap";
+import { PlusLg, Trash } from "react-bootstrap-icons";
+import { useHistory, useParams } from "react-router-dom";
 
-import { EditRestaurantButton } from '../../components/Utilities';
+import {
+  EditRestaurantButton,
+  DeleteRestaurantButton,
+} from "../../components/Utilities";
 
-const BASE_URL = process.env.REACT_APP_BASE_URL + "/api";
+const API_URL = process.env.REACT_APP_BASE_URL + "/api";
 const API_ENDPOINT = process.env.REACT_APP_BASE_URL + "/api/restaurants";
 export default function Restaurant() {
   // Use type declaration here
@@ -23,28 +37,19 @@ export default function Restaurant() {
     return response;
   };
 
-  const deleteRestaurant = async () => {
-    const deleted = await axios.delete(`${API_ENDPOINT}/${id}`);
+  const deleteRestaurant = async (deleted: any) => {
     if (deleted.status === 200) {
       history.push("/restaurants");
     }
   };
 
-  const editRestaurant = async (data: any) => {
+  const editRestaurant = async (edited: any) => {
     setRestaurant({ loading: true, data: restaurant.data });
-    const edited = await axios.put(`${API_ENDPOINT}/${id}`, data);
+
     if (edited.status === 200) {
-      const rest = await getRestaurant();
-      setRestaurant({ loading: false, data: rest.data });
+      const newRestaurant = await getRestaurant();
+      setRestaurant({ loading: false, data: newRestaurant.data });
     }
-  };
-
-  const createMenuItem = async (menuId: any, menuItem: any) => {
-    const menuItemToSend = menuItem;
-    menuItemToSend.menu_id = menuId;
-
-    const response = await axios.post(`${BASE_URL}/menuItems`, menuItemToSend);
-    return response;
   };
 
   useEffect(() => {
@@ -77,18 +82,20 @@ export default function Restaurant() {
               src={restaurant.data.image}
               style={{ maxWidth: "80%", maxHeight: "18rem" }}
             />
-            <RestaurantControls
-              handleEdit={editRestaurant}
-              handleDelete={deleteRestaurant}
-              restaurant={restaurant}
-            />
+            <RestaurantControls>
+              <EditRestaurantButton
+                handleEdit={editRestaurant}
+                restaurant={restaurant.data}
+              />{" "}
+              <DeleteRestaurantButton
+                handleDelete={deleteRestaurant}
+                restaurant={restaurant.data}
+              />
+            </RestaurantControls>
             <AddMenu />
           </Col>
           <Col md={9}>
-            <Menus
-              menus={restaurant.data.menus}
-              createMenuItem={createMenuItem}
-            />
+            <Menus menus={restaurant.data.menus} />
           </Col>
         </Row>
       </Container>
@@ -104,11 +111,7 @@ function Menus(props: any) {
       <Tabs defaultActiveKey={menus[0].id} className="mb-3">
         {menus.map((menu: any) => (
           <Tab eventKey={menu.id} title={menu.title} key={menu.id}>
-            <Menu
-              key={menu.id}
-              menu={menu}
-              createMenuItem={props.createMenuItem}
-            />
+            <Menu menuItems={menu.menuItems} menuId={menu.id} />
           </Tab>
         ))}
       </Tabs>
@@ -119,19 +122,19 @@ function Menus(props: any) {
 }
 
 function Menu(props: any) {
-  const [menuItems, setMenuItems] = useState(props.menu.menuItems);
+  const [menuItems, setMenuItems] = useState(props.menuItems);
 
-  const addMenuItem = (item: any) => {
-    setMenuItems([...menuItems, item]);
+  const addMenuItem = async (menuItem: any) => {
+    setMenuItems([...menuItems, menuItem]);
   };
 
-  const deleteItem = async (item_id: any) => {
-    const deleted = await axios.delete(`${BASE_URL}/menuItems/${item_id}`);
-    if (deleted.status === 200) {
-      setMenuItems(menuItems.filter((item: any) => item.id !== item_id));
+  const deleteMenuItem = async (menuItemId: any) => {
+    const response = await axios.delete(`${API_URL}/menuItems/${menuItemId}`);
+
+    if (response.status === 200) {
+      setMenuItems(menuItems.filter((item: any) => item.id !== menuItemId));
     }
   };
-
   return (
     <>
       <Row className="border-bottom my-2">
@@ -139,87 +142,18 @@ function Menu(props: any) {
         <Col md="3">Price</Col>
         <Col md="1"></Col>
       </Row>
-      <AddMenuItemForm
-        addMenuItem={async (menuItem: any) => {
-          const createdItem = await props.createMenuItem(
-            props.menu.id,
-            menuItem
-          );
-          if (createdItem.status === 201) {
-            addMenuItem(createdItem.data);
-          }
-        }}
-      />
+      <AddMenuItemForm addMenuItem={addMenuItem} menuId={props.menuId} />
       {menuItems.map((menuItem: any) => (
         <MenuItem
           menuItem={menuItem}
           key={menuItem.id}
-          deleteItem={async () => deleteItem(menuItem.id)}
+          deleteMenuItem={async () => deleteMenuItem(menuItem.id)}
         />
       ))}
     </>
   );
 }
 
-function MenuItem(props: any) {
-  return (
-    <Row className="my-2">
-      <Col md="8">{props.menuItem.name}</Col>
-      <Col md="3">{props.menuItem.price}</Col>
-      <Col md="1" className="mx-auto">
-        <Button
-          variant="outline-danger"
-          className="mx-auto"
-          onClick={props.deleteItem}
-        >
-          <Trash />
-        </Button>
-      </Col>
-    </Row>
-  );
-}
-
-function AddMenu(props: any) {
-  return <></>;
-}
-
-function RestaurantControls(props: any) {
-  const [showModal, setShowModal] = useState(false);
-
-  const handleCloseModal = () => setShowModal(false);
-  const handleDeleteButton = () => setShowModal(true);
-
-  const handleDelete = async () => {
-    setShowModal(false);
-    props.handleDelete();
-  };
-
-  return (
-    <>
-      <EditRestaurantButton
-        edit={props.handleEdit}
-        restaurant={props.restaurant}
-      />{" "}
-      <Button variant="outline-danger" onClick={handleDeleteButton}>
-        Delete
-      </Button>
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Alert!</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Are you sure you want to delete?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="danger" size="lg" onClick={handleDelete}>
-            DELETE
-          </Button>
-          <Button variant="outline-primary" onClick={handleCloseModal}>
-            Cancel
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </>
-  );
-}
 function AddMenuItemForm(props: any) {
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState(0);
@@ -232,11 +166,17 @@ function AddMenuItemForm(props: any) {
     setItemPrice(event.target.value);
   };
 
-  const handleAdd = () => {
-    props.addMenuItem({
+  const handleAdd = async () => {
+    const newMenuItem = {
       name: itemName,
       price: itemPrice,
-    });
+      menu_id: props.menuId,
+    };
+    const response = await axios.post(`${API_URL}/menuItems`, newMenuItem);
+
+    if (response.status === 201) {
+      props.addMenuItem(response.data);
+    }
   };
 
   return (
@@ -269,4 +209,30 @@ function AddMenuItemForm(props: any) {
       {/* </Form> */}
     </Row>
   );
+}
+
+function MenuItem({ menuItem, deleteMenuItem }: any) {
+  return (
+    <Row className="my-2">
+      <Col md="8">{menuItem.name}</Col>
+      <Col md="3">{menuItem.price}</Col>
+      <Col md="1" className="mx-auto">
+        <Button
+          variant="outline-danger"
+          className="mx-auto"
+          onClick={deleteMenuItem}
+        >
+          <Trash />
+        </Button>
+      </Col>
+    </Row>
+  );
+}
+
+function AddMenu(props: any) {
+  return <></>;
+}
+
+function RestaurantControls(props: any) {
+  return <div className="my-2">{props.children}</div>;
 }

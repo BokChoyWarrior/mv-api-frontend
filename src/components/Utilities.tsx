@@ -1,68 +1,52 @@
-import './Utilities.css';
+import "./Utilities.css";
 
-import { useState } from 'react';
-import { Button, Card, Col, Form, Modal, Row } from 'react-bootstrap';
-import { useHistory } from 'react-router-dom';
+import { useState } from "react";
+import { Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
+import { useHistory } from "react-router-dom";
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_BASE_URL + "/api";
 
 export function LoadingSpinner() {
   return <div className="lds-dual-ring"></div>;
 }
 
 export function RestaurantCard(props: any) {
-  const history = useHistory();
-  const [showModal, setShowModal] = useState(false);
+  const [restaurant, setRestaurant] = useState(props.restaurant);
 
-  const handleCloseModal = () => setShowModal(false);
-  const handleDeleteButton = () => setShowModal(true);
-
-  const handleViewButton = () => {
-    history.push(`/restaurants/${props.restaurant.id}`);
+  const getRestaurant = async () => {
+    const response = await axios.get(`${API_URL}/restaurants/${restaurant.id}`);
+    return response;
   };
 
-  const handleDelete = async () => {
-    props.delete(props.restaurant.id);
-    setShowModal(false);
+  const editRestaurant = async (edited: any) => {
+    if (edited.status === 200) {
+      const newRestaurant = await getRestaurant();
+      setRestaurant(newRestaurant.data);
+    }
   };
+
   return (
     <>
       <Col className="mx-auto my-2">
         <Card style={{ width: "24rem", height: "24rem" }}>
           <Card.Img
             variant="top"
-            src={props.restaurant.image}
+            src={restaurant.image}
             style={{ height: "16rem" }}
           />
           <Card.Body>
-            <Card.Title>{props.restaurant.name}</Card.Title>
+            <Card.Title>{restaurant.name}</Card.Title>
             {/* <Card.Text>{props.restaurant.description}</Card.Text> */}
-            <Button variant="outline-primary" onClick={handleViewButton}>
-              View
-            </Button>{" "}
+            <ViewRestaurantButton id={restaurant.id} />{" "}
             <EditRestaurantButton
-              edit={props.handleEdit}
-              restaurant={props.restaurant}
+              handleEdit={editRestaurant}
+              restaurant={restaurant}
             />{" "}
-            <Button variant="outline-danger" onClick={handleDeleteButton}>
-              Delete
-            </Button>
+            {props.deleteButton}
           </Card.Body>
         </Card>
       </Col>
-
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Alert!</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Are you sure you want to delete?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="danger" onClick={handleDelete}>
-            DELETE
-          </Button>
-          <Button variant="outline-primary" onClick={handleCloseModal}>
-            Cancel
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </>
   );
 }
@@ -71,13 +55,11 @@ export function EditRestaurantButton(props: any) {
   const [showModal, setShowModal] = useState(false);
 
   const [restaurantName, setRestarauntName] = useState(
-    `${props.restaurant.data.name}`
+    `${props.restaurant.name}`
   );
   const [restaurantImage, setRestarauntImage] = useState(
-    `${props.restaurant.data.image}`
+    `${props.restaurant.image}`
   );
-
-  const [editButtonIsLoading, setEditButtonIsLoading] = useState(false);
 
   const handleCloseModal = () => setShowModal(false);
   const handleEditButton = () => setShowModal(true);
@@ -91,14 +73,16 @@ export function EditRestaurantButton(props: any) {
 
   const handleEdit = async (event: any) => {
     event.preventDefault();
-    setEditButtonIsLoading(true);
 
-    await props.edit({
-      name: restaurantName,
-      image: restaurantImage,
-    });
-    setEditButtonIsLoading(false);
+    const newRestaurant = { name: restaurantName, image: restaurantImage };
+    console.log(props.restaurant.id);
+    const edited = await axios.put(
+      `${API_URL}/restaurants/${props.restaurant.id}`,
+      newRestaurant
+    );
+
     setShowModal(false);
+    props.handleEdit(edited);
   };
 
   return (
@@ -149,5 +133,58 @@ export function EditRestaurantButton(props: any) {
         </Modal.Body>
       </Modal>
     </>
+  );
+}
+
+export function DeleteRestaurantButton(props: any) {
+  const [showModal, setShowModal] = useState(false);
+
+  const handleCloseModal = () => setShowModal(false);
+  const handleDeleteButton = () => setShowModal(true);
+
+  const handleDelete = async () => {
+    const deleted = await axios.delete(
+      `${API_URL}/restaurants/${props.restaurant.id}`
+    );
+    setShowModal(false);
+    props.handleDelete(deleted, props.restaurant.id);
+  };
+
+  return (
+    <>
+      <Button variant="outline-danger" onClick={handleDeleteButton}>
+        Delete
+      </Button>
+
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Alert!</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to delete {props.restaurant.name}?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="danger" size="lg" onClick={handleDelete}>
+            DELETE
+          </Button>
+          <Button variant="outline-primary" onClick={handleCloseModal}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
+  );
+}
+
+export function ViewRestaurantButton(props: any) {
+  const history = useHistory();
+
+  const handleViewButton = () => {
+    history.push(`/restaurants/${props.id}`);
+  };
+  return (
+    <Button variant="outline-primary" onClick={handleViewButton}>
+      View
+    </Button>
   );
 }
