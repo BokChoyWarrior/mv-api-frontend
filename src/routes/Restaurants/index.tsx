@@ -13,12 +13,13 @@ import {
 
 import {
   RestaurantCard,
-  EditRestaurantButton,
   DeleteRestaurantButton,
   ViewRestaurantButton,
+  RestaurantControls,
+  EditRestaurantButton,
 } from "../../components/Utilities";
 
-const API_ENDPOINT = process.env.REACT_APP_BASE_URL + "/api/restaurants";
+const API_URL = process.env.REACT_APP_BASE_URL + "/api";
 
 export default function Restaurants() {
   const [restaurants, setRestaurants]: any = useState({
@@ -26,7 +27,18 @@ export default function Restaurants() {
     data: [],
   });
 
-  const deleteRestaurant = async (response: any, id: any) => {
+  // CRUD
+  const createRestaurant = async (details: any) => {
+    const response = await axios.post(`${API_URL}/restaurants`, details);
+    if (response.status === 201) {
+      setRestaurants({
+        loading: false,
+        data: [...restaurants.data, response.data],
+      });
+    }
+  };
+  const deleteRestaurant = async (id: any) => {
+    const response = await axios.delete(`${API_URL}/restaurants/${id}`);
     if (response.status === 200) {
       setRestaurants({
         loading: false,
@@ -36,30 +48,26 @@ export default function Restaurants() {
       });
     }
   };
-
-  const createRestaurant = async (details: any) => {
-    const response = await axios.post(API_ENDPOINT, details);
-    if (response.status === 201) {
-      setRestaurants({
-        loading: false,
-        data: [...restaurants.data, response.data],
-      });
+  const editRestaurant = async (id: any, details: any) => {
+    const response = await axios.put(`${API_URL}/restaurants/${id}`, details);
+    if (response.status === 200) {
+      refreshRestaurants();
     }
   };
 
-  const getRestaurants = async () => {
-    const response = await axios.get(API_ENDPOINT);
-    return response;
-  };
-
-  useEffect(() => {
-    getRestaurants()
+  const refreshRestaurants = async () => {
+    await axios
+      .get(`${API_URL}/restaurants`)
       .then((res: any) => {
         setRestaurants({ loading: false, data: res.data });
       })
       .catch((err) => {
         console.log(err);
       });
+  };
+
+  useEffect(() => {
+    refreshRestaurants();
   }, []);
 
   if (restaurants.loading) {
@@ -82,18 +90,21 @@ export default function Restaurants() {
       <AddRestaurantButton create={createRestaurant} />
       <Row xs="auto" md="auto" lg="auto">
         {restaurants.data.map((restaurant: any) => (
-          <RestaurantCard
-            restaurant={restaurant}
-            key={restaurant.id}
-            deleteButton={
-              <>
-                <DeleteRestaurantButton
-                  restaurant={restaurant}
-                  handleDelete={deleteRestaurant}
-                />
-              </>
-            }
-          />
+          <RestaurantCard restaurant={restaurant} key={restaurant.id}>
+            <RestaurantControls>
+              <ViewRestaurantButton id={restaurant.id} />{" "}
+              <EditRestaurantButton
+                handleEdit={(details: any) =>
+                  editRestaurant(restaurant.id, details)
+                }
+                restaurant={restaurant}
+              />{" "}
+              <DeleteRestaurantButton
+                handleDelete={() => deleteRestaurant(restaurant.id)}
+                name={restaurant.name}
+              />
+            </RestaurantControls>
+          </RestaurantCard>
         ))}
       </Row>
     </Container>
@@ -109,15 +120,10 @@ function PlaceholderRestaurant() {
           src="grey_square.png"
           style={{ maxHeight: "16rem" }}
         />
-        {/* <Placeholder as={Card.Img} animation="glow" /> */}
         <Card.Body>
           <Placeholder as={Card.Title} animation="glow">
             <Placeholder xs={4} />
           </Placeholder>
-          {/* <Placeholder as={Card.Text} animation="glow">
-            <Placeholder xs={7} /> <Placeholder xs={4} /> <Placeholder xs={4} />{" "}
-            <Placeholder xs={6} /> <Placeholder xs={8} />
-          </Placeholder> */}
           <Placeholder.Button
             variant="outline-primary"
             xs={3}
@@ -138,7 +144,6 @@ function PlaceholderRestaurant() {
 
 function AddRestaurantButton(props: any) {
   const [showModal, setShowModal] = useState(false);
-  const [createButtonIsLoading, setCreateButtonIsLoading] = useState(false);
 
   const [restaurantName, setRestarauntName] = useState("");
   const [restaurantImage, setRestarauntImage] = useState("");
@@ -157,13 +162,11 @@ function AddRestaurantButton(props: any) {
 
   const handleCreate = async (event: any) => {
     event.preventDefault();
-    setCreateButtonIsLoading(true);
 
-    const result = await props.create({
+    await props.create({
       name: restaurantName,
       image: restaurantImage,
     });
-    setCreateButtonIsLoading(false);
     setShowModal(false);
   };
 
@@ -223,14 +226,6 @@ function AddRestaurantButton(props: any) {
             </Row>
           </Form>
         </Modal.Body>
-        {/* <Modal.Footer>
-          <Button variant="danger" size="lg" onClick={handleCreate}>
-            DELETE
-          </Button>
-          <Button variant="outline-primary" onClick={handleCloseModal}>
-            Cancel
-          </Button>
-        </Modal.Footer> */}
       </Modal>
     </>
   );

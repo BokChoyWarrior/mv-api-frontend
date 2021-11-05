@@ -18,11 +18,12 @@ import { useHistory, useParams } from "react-router-dom";
 import {
   EditRestaurantButton,
   DeleteRestaurantButton,
+  RestaurantControls,
 } from "../../components/Utilities";
 
 const API_URL = process.env.REACT_APP_BASE_URL + "/api";
-const API_ENDPOINT = process.env.REACT_APP_BASE_URL + "/api/restaurants";
-export default function Restaurant() {
+
+export default function Restaurant(props: any) {
   // Use type declaration here
   const { id } = useParams<{ id: string }>();
   const history = useHistory();
@@ -32,28 +33,9 @@ export default function Restaurant() {
     data: {},
   });
 
-  const getRestaurant = async () => {
-    const response = await axios.get(`${API_ENDPOINT}/${id}?getNested=true`);
-    return response;
-  };
-
-  const deleteRestaurant = async (deleted: any) => {
-    if (deleted.status === 200) {
-      history.push("/restaurants");
-    }
-  };
-
-  const editRestaurant = async (edited: any) => {
-    setRestaurant({ loading: true, data: restaurant.data });
-
-    if (edited.status === 200) {
-      const newRestaurant = await getRestaurant();
-      setRestaurant({ loading: false, data: newRestaurant.data });
-    }
-  };
-
-  useEffect(() => {
-    getRestaurant()
+  const updateRestaurant = async () => {
+    await axios
+      .get(`${API_URL}/restaurants/${id}?getNested=true`)
       .then((res: any) => {
         setRestaurant({ isLoading: false, data: res.data });
       })
@@ -61,6 +43,48 @@ export default function Restaurant() {
         console.log(err);
         history.push("/restaurants");
       });
+  };
+
+  const deleteRestaurant = async () => {
+    const response = await axios.delete(
+      `${API_URL}/restaurants/${restaurant.data.id}`
+    );
+    if (response.status === 200) {
+      history.push("/restaurants");
+    }
+  };
+
+  const editRestaurant = async (details: any) => {
+    setRestaurant({ loading: true, data: restaurant.data });
+    const response = await axios.put(
+      `${API_URL}/restaurants/${restaurant.data.id}`,
+      details
+    );
+
+    if (response.status === 200) {
+      updateRestaurant();
+    }
+  };
+
+  const addMenu = async (toAdd: any) => {
+    const { title } = toAdd;
+
+    const added = await axios.post(`${API_URL}/menus`, {
+      title: title,
+      restaurant_id: restaurant.data.id,
+    });
+
+    if (added.status === 201) {
+      // init menuItems so that we can add to them
+      added.data.menuItems = [];
+      restaurant.data.menus.push(added.data);
+      setRestaurant({ ...restaurant });
+    }
+  };
+
+  useEffect(() => {
+    updateRestaurant();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (restaurant.isLoading) {
@@ -83,6 +107,7 @@ export default function Restaurant() {
               style={{ maxWidth: "80%", maxHeight: "18rem" }}
             />
             <RestaurantControls>
+              <AddMenuButton handleAdd={addMenu} />{" "}
               <EditRestaurantButton
                 handleEdit={editRestaurant}
                 restaurant={restaurant.data}
@@ -90,9 +115,8 @@ export default function Restaurant() {
               <DeleteRestaurantButton
                 handleDelete={deleteRestaurant}
                 restaurant={restaurant.data}
-              />
+              />{" "}
             </RestaurantControls>
-            <AddMenu />
           </Col>
           <Col md={9}>
             <Menus menus={restaurant.data.menus} />
@@ -180,7 +204,7 @@ function AddMenuItemForm(props: any) {
   };
 
   return (
-    <Row className="my-2">
+    <Row>
       {/* <Form onSubmit={handleCreate}> */}
       <Col md="8">
         <Form.Group controlId="menuItemName">
@@ -214,9 +238,13 @@ function AddMenuItemForm(props: any) {
 function MenuItem({ menuItem, deleteMenuItem }: any) {
   return (
     <Row className="my-2">
-      <Col md="8">{menuItem.name}</Col>
-      <Col md="3">{menuItem.price}</Col>
-      <Col md="1" className="mx-auto">
+      <Col md="8" className="my-auto">
+        {menuItem.name}
+      </Col>
+      <Col md="3" className="my-auto">
+        {menuItem.price}
+      </Col>
+      <Col md="1" className="mx-auto my-auto">
         <Button
           variant="outline-danger"
           className="mx-auto"
@@ -229,10 +257,63 @@ function MenuItem({ menuItem, deleteMenuItem }: any) {
   );
 }
 
-function AddMenu(props: any) {
-  return <></>;
-}
+function AddMenuButton(props: any) {
+  const [showModal, setShowModal] = useState(false);
 
-function RestaurantControls(props: any) {
-  return <div className="my-2">{props.children}</div>;
+  const [menuTitle, setMenuTitle] = useState("");
+
+  const handleCloseModal = () => setShowModal(false);
+  const handleCreateButton = () => {
+    setShowModal(true);
+  };
+
+  const handleTitleFormChange = (event: any) => {
+    setMenuTitle(event.target.value);
+  };
+
+  const handleCreate = async (event: any) => {
+    event.preventDefault();
+
+    await props.handleAdd({
+      title: menuTitle,
+    });
+    setShowModal(false);
+  };
+
+  return (
+    <>
+      <Button variant="outline-primary" onClick={handleCreateButton}>
+        Add Menu
+      </Button>
+
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Create Menu</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleCreate}>
+            <Form.Group className="mb-3" controlId="menuName">
+              <Form.Label>Restaurant Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Menu Title"
+                required
+                onChange={handleTitleFormChange}
+              />
+            </Form.Group>
+            <Row className="mx-auto" xs="auto" md="auto" lg="auto">
+              <Col className="mx-auto">
+                <Button variant="primary" type="submit">
+                  Submit
+                </Button>
+              </Col>
+              <Col className="mx-auto">
+                <Button variant="outline-danger">Cancel</Button>
+              </Col>
+            </Row>
+          </Form>
+        </Modal.Body>
+      </Modal>
+    </>
+  );
 }

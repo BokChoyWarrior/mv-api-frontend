@@ -23,10 +23,6 @@ function App() {
               <LinkContainer to="/restaurants">
                 <Nav.Link>Restaurants</Nav.Link>
               </LinkContainer>
-
-              <LinkContainer to="/menus">
-                <Nav.Link>Menus</Nav.Link>
-              </LinkContainer>
             </Nav>
           </Container>
         </Navbar>
